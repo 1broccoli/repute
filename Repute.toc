@@ -1,0 +1,8 @@
+## Interface: 11306
+## Title: Repute
+## Author: Pegga
+## Notes: Reputation gained is posted in chat
+## Version: 1.0
+## SavedVariables: Repute_Data
+
+Repute.lua
