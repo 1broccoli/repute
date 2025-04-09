@@ -2,7 +2,7 @@
 Tracks reputation gained and is printed in chat
 
 
-
+ 
 
 ![image](https://github.com/user-attachments/assets/fcc4da0d-a97c-46b6-8cd5-ec82fab746be)
 
