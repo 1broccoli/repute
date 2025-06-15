@@ -1,5 +1,15 @@
 local addonName, addon = ...
-Repute = CreateFrame("Frame", nil, UIParent), {}
+
+-- Ace3 setup
+local AceAddon = LibStub("AceAddon-3.0")
+local AceEvent = LibStub("AceEvent-3.0")
+local AceConsole = LibStub("AceConsole-3.0")
+local AceGUI = LibStub("AceGUI-3.0")
+local LDB = LibStub("LibDataBroker-1.1", true)
+local LDBIcon = LibStub("LibDBIcon-1.0", true)
+
+local Repute = AceAddon:NewAddon("Repute", "AceEvent-3.0", "AceConsole-3.0")
+_G.Repute = Repute
 
 local playerName = UnitName("player")
 local server = GetRealmName()
@@ -15,6 +25,9 @@ local repFrame = DEFAULT_CHAT_FRAME
 
 local rewardItemCache = {}
 
+-- SavedVariables for minimap icon
+ReputeDB = ReputeDB or { minimap = { hide = false } }
+
 -- Ensure factionStandingColours is initialized
 if not Repute.factionStandingColours then
     Repute.factionStandingColours = {
@@ -29,75 +42,154 @@ if not Repute.factionStandingColours then
     }
 end
 
-Repute:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" then
-        Repute:initiate()
-    elseif event == "MODIFIER_STATE_CHANGED" then
-        local button, state = ...
-        if button == "LALT" or button == "RALT" then
-            local link = select(2, GameTooltip:GetItem())
-            if link then
-                local id = tonumber(string.match(link, "item:(%d*)"))
-                if Repute.repitems[id] then
-                    GameTooltip:ClearLines()
-                    GameTooltip:SetHyperlink(link)
+function Repute:OnEnable()
+    self:RegisterEvent("PLAYER_LOGIN")
+    self:RegisterEvent("MODIFIER_STATE_CHANGED")
+    self:RegisterEvent("PLAYER_LEVEL_UP")
+    self:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+    self:RegisterEvent("QUEST_TURNED_IN")
+    self:RegisterEvent("LEARNED_SPELL_IN_TAB")
+    self:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
+    -- Do NOT register CHAT_MSG_COMBAT_HONOR_ADD (not a valid event in Classic)
+end
+
+function Repute:PLAYER_LOGIN()
+    self:initiate()
+end
+
+function Repute:MODIFIER_STATE_CHANGED(event, button, state)
+    if button == "LALT" or button == "RALT" then
+        local link = select(2, GameTooltip:GetItem())
+        if link then
+            local id = tonumber(string.match(link, "item:(%d*)"))
+            if self.repitems[id] then
+                GameTooltip:ClearLines()
+                GameTooltip:SetHyperlink(link)
+            end
+        end
+    end
+    if button == "LCTRL" or button == "RCTRL" and state == 1 then
+        local link = select(2, GameTooltip:GetItem())
+        if link then
+            local id = tonumber(string.match(link, "item:(%d*)"))
+            if self.repitems[id] then
+                if showRewardTooltip.rewardList and showRewardTooltip.rewardMax > 1 then
+                    showRewardTooltip.rewardShowing = showRewardTooltip.rewardShowing + 1
+                    if showRewardTooltip.rewardShowing > showRewardTooltip.rewardMax then showRewardTooltip.rewardShowing = 1 end
+                    
+                    GetItemInfo(showRewardTooltip.rewardList[showRewardTooltip.rewardShowing])
+                    rewardItemCache[showRewardTooltip.rewardList[showRewardTooltip.rewardShowing]] = true
+                    
+                    showRewardTooltip:SetHyperlink("item:"..showRewardTooltip.rewardList[showRewardTooltip.rewardShowing])
+                    showRewardTooltip:AddDoubleLine("Press CTRL to cycle rewards", showRewardTooltip.rewardShowing.."/"..showRewardTooltip.rewardMax)
+                    showRewardTooltip:Show()
                 end
             end
         end
-        if button == "LCTRL" or button == "RCTRL" and state == 1 then
-            local link = select(2, GameTooltip:GetItem())
-            if link then
-                local id = tonumber(string.match(link, "item:(%d*)"))
-                if Repute.repitems[id] then
-                    if showRewardTooltip.rewardList and showRewardTooltip.rewardMax > 1 then
-                        showRewardTooltip.rewardShowing = showRewardTooltip.rewardShowing + 1
-                        if showRewardTooltip.rewardShowing > showRewardTooltip.rewardMax then showRewardTooltip.rewardShowing = 1 end
-                        
-                        GetItemInfo(showRewardTooltip.rewardList[showRewardTooltip.rewardShowing])
-                        rewardItemCache[showRewardTooltip.rewardList[showRewardTooltip.rewardShowing]] = true
-                        
-                        showRewardTooltip:SetHyperlink("item:"..showRewardTooltip.rewardList[showRewardTooltip.rewardShowing])
-                        showRewardTooltip:AddDoubleLine("Press CTRL to cycle rewards", showRewardTooltip.rewardShowing.."/"..showRewardTooltip.rewardMax)
-                        showRewardTooltip:Show()
-                    end
-                end
-            end
-        end
-    elseif event == "GET_ITEM_INFO_RECEIVED" then
-        local itemID, success = ...
-        if success then
-            if rewardItemCache[itemID] then
-                C_Timer.After(0.1, function()
-                    local link = select(2, GameTooltip:GetItem())
-                    if link then
-                        local id = tonumber(string.match(link, "item:(%d*)"))
-                        if Repute.repitems[id] then
-                            if showRewardTooltip.rewardList and showRewardTooltip.rewardMax > 1 then
-                                local needsCycleText = true
-                                for i = 1, showRewardTooltip:NumLines() do
-                                    if string.find(_G["showRewardTooltipTextLeft"..i]:GetText(), "Press CTRL to cycle rewards") then needsCycleText = false end
-                                end
-                                if needsCycleText then
-                                    showRewardTooltip:AddDoubleLine("Press CTRL to cycle rewards", showRewardTooltip.rewardShowing.."/"..showRewardTooltip.rewardMax)
-                                    showRewardTooltip:Show()
-                                end
+    end
+end
+
+function Repute:GET_ITEM_INFO_RECEIVED(event, itemID, success)
+    if success then
+        if rewardItemCache[itemID] then
+            C_Timer.After(0.1, function()
+                local link = select(2, GameTooltip:GetItem())
+                if link then
+                    local id = tonumber(string.match(link, "item:(%d*)"))
+                    if self.repitems[id] then
+                        if showRewardTooltip.rewardList and showRewardTooltip.rewardMax > 1 then
+                            local needsCycleText = true
+                            for i = 1, showRewardTooltip:NumLines() do
+                                if string.find(_G["showRewardTooltipTextLeft"..i]:GetText(), "Press CTRL to cycle rewards") then needsCycleText = false end
+                            end
+                            if needsCycleText then
+                                showRewardTooltip:AddDoubleLine("Press CTRL to cycle rewards", showRewardTooltip.rewardShowing.."/"..showRewardTooltip.rewardMax)
+                                showRewardTooltip:Show()
                             end
                         end
                     end
-                end)
-            end
+                end
+            end)
         end
-    elseif event == "PLAYER_LEVEL_UP" then
-        level = ...
-        Repute_Data[profileKey].profile.level = level
-    elseif event == "QUEST_TURNED_IN" then
-        local questID = ...
-        if Repute_Data[profileKey].quests[questID] == false then Repute_Data[profileKey].quests[questID] = true end
-    elseif event == "LEARNED_SPELL_IN_TAB" then
-        local spellID = ...
-        if Repute_Data[profileKey].classbooks[spellID] == false then Repute_Data[profileKey].classbooks[spellID] = true end
     end
-end)
+end
+
+function Repute:PLAYER_LEVEL_UP(event, level)
+    level = level
+    Repute_Data[profileKey].profile.level = level
+end
+
+function Repute:QUEST_TURNED_IN(event, questID)
+    if Repute_Data[profileKey].quests[questID] == false then Repute_Data[profileKey].quests[questID] = true end
+end
+
+function Repute:LEARNED_SPELL_IN_TAB(event, spellID)
+    if Repute_Data[profileKey].classbooks[spellID] == false then Repute_Data[profileKey].classbooks[spellID] = true end
+end
+
+-- AceGUI settings frame
+local settingsFrame
+
+function Repute:ShowSettings()
+    if settingsFrame and settingsFrame:IsShown() then
+        settingsFrame:Hide()
+        return
+    end
+    if not settingsFrame then
+        settingsFrame = AceGUI:Create("Frame")
+        settingsFrame:SetTitle("Repute Settings")
+        settingsFrame:SetStatusText("Honor/Rep Addon by Pegga")
+        settingsFrame:SetCallback("OnClose", function(widget) AceGUI:Release(widget) settingsFrame = nil end)
+        settingsFrame:SetLayout("Flow")
+        settingsFrame:SetWidth(350)
+        settingsFrame:SetHeight(150)
+
+        local testBtn = AceGUI:Create("Button")
+        testBtn:SetText("Test Honor Print")
+        testBtn:SetWidth(200)
+        testBtn:SetCallback("OnClick", function()
+            -- Print a sample honor message using the same logic as in Repute_AddMessage
+            local sample = "|cffffd100+123 Honor|r | |cff40c7ebTestmage|r |cffffd100(Grand Marshal)|r"
+            DEFAULT_CHAT_FRAME:AddMessage(sample)
+        end)
+        settingsFrame:AddChild(testBtn)
+    end
+    settingsFrame:Show()
+end
+
+-- Minimap button using LibDataBroker and LibDBIcon
+if LDB and LDBIcon then
+    local ldb = LDB:NewDataObject("Repute", {
+        type = "data source",
+        text = "Repute",
+        icon = "Interface\\AddOns\\Repute\\Media\\repute.png",
+        OnClick = function(_, button)
+            if button == "LeftButton" then
+                Repute:ShowSettings()
+            end
+        end,
+        OnTooltipShow = function(tooltip)
+            tooltip:AddLine("Repute")
+            tooltip:AddLine("Left-click to open settings.", 1, 1, 1)
+        end,
+    })
+
+    function Repute:OnInitialize()
+        self:RegisterChatCommand("repute", "HandleSlashCommand")
+        if LDBIcon then
+            LDBIcon:Register("Repute", ldb, ReputeDB.minimap)
+        end
+    end
+else
+    function Repute:OnInitialize()
+        self:RegisterChatCommand("repute", "HandleSlashCommand")
+    end
+end
+
+-- Add /repute config to open settings
+function Repute:HandleSlashCommand(msg)
+    self:ShowSettings()
+end
 
 function Repute:initiate()
     local defaultData = {
@@ -155,13 +247,6 @@ function Repute:initiate()
         if v[playerClass] then
             Repute_Data[profileKey].classbooks[v[playerClass]] = IsSpellKnown(v[playerClass])
         end
-    end
-end
-
-SLASH_Repute1 = "/Repute"
-function SlashCmdList.Repute(msg)
-    for i, v in pairs(Repute_Data[profileKey].quests) do
-        print(i, v)
     end
 end
 
@@ -416,7 +501,7 @@ local function addClassBookToToolTip(self, id)
 end
 
 local function addRepToToolTip(self, id)
-    -- Define the function to add reputation information to the tooltip
+    
     local factionName, _, standingID, barMin, barMax, barValue = GetFactionInfoByID(id)
     if factionName then
         local factionStandingtext = Repute.factionStandingColours[standingID] .. GetText("FACTION_STANDING_LABEL"..standingID, gender)
@@ -513,10 +598,76 @@ function Repute:getAllFactions(initiate)
     end
 end
 
--- Register Initial Events
-Repute:RegisterEvent("PLAYER_LOGIN")
-Repute:RegisterEvent("MODIFIER_STATE_CHANGED")
-Repute:RegisterEvent("PLAYER_LEVEL_UP")
-Repute:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-Repute:RegisterEvent("QUEST_TURNED_IN")
-Repute:RegisterEvent("LEARNED_SPELL_IN_TAB")
+-- Honor message filter using AceEvent (Classic API)
+-- Event handler for CHAT_MSG_COMBAT_HONOR_GAIN and CHAT_MSG_COMBAT_HONOR_ADD
+-- and print our own message, suppressing Blizzard's.
+
+local honor_award_pattern = "You have been awarded (%d+) honor points%."
+local honor_kill_pattern = "^(.-) dies, honorable kill Rank: (.-) %(Estimated Honor Points: (%d+)%)"
+
+local RAID_CLASS_COLORS = RAID_CLASS_COLORS or CUSTOM_CLASS_COLORS
+
+-- Static fallback for class colors (Blizzard default)
+local STATIC_CLASS_COLORS = {
+    DRUID   = { r = 1.00, g = 0.49, b = 0.04 },
+    HUNTER  = { r = 0.67, g = 0.83, b = 0.45 },
+    MAGE    = { r = 0.25, g = 0.78, b = 0.92 },
+    PALADIN = { r = 0.96, g = 0.55, b = 0.73 },
+    PRIEST  = { r = 1.00, g = 1.00, b = 1.00 },
+    ROGUE   = { r = 1.00, g = 0.96, b = 0.41 },
+    SHAMAN  = { r = 0.00, g = 0.44, b = 0.87 },
+    WARLOCK = { r = 0.53, g = 0.53, b = 0.93 },
+    WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
+}
+
+-- Utility: Try to get class from Spy if available
+local function getClassForPlayer(name)
+    if Spy and Spy.db and Spy.db.profile and Spy.db.profile.Colors and Spy.db.profile.Colors.Class then
+        for class, tbl in pairs(Spy.db.profile.Colors.Class) do
+            if tbl[name] then
+                return class
+            end
+        end
+    end
+    return nil
+end
+
+-- Colorize name by class
+local function colorizeClassName(name, class)
+    local color = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]) or (CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class])
+    if color then
+        return ("|cff%02x%02x%02x%s|r"):format(color.r*255, color.g*255, color.b*255, name)
+    else
+        return name
+    end
+end
+
+-- Your event handler
+function Repute:CHAT_MSG_COMBAT_HONOR_GAIN(event, msg, ...)
+    local honor = msg:match(honor_award_pattern)
+    if honor then
+        DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r"):format(honor))
+        return
+    end
+    local player, rank, honor2 = msg:match(honor_kill_pattern)
+    if player and rank and honor2 then
+        local class = getClassForPlayer(player)
+        if not class and UnitName("target") == player then
+            _, class = UnitClass("target")
+        end
+        local coloredName = class and colorizeClassName(player, class) or player
+        DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r | %s |cffffd100(%s)|r"):format(honor2, coloredName, rank))
+        return
+    end
+end
+
+-- To suppress Blizzard's message, use a chat filter that returns true for these messages
+local function honor_filter(self, event, msg, ...)
+    if msg:match(honor_award_pattern) or msg:match(honor_kill_pattern) then
+        return true
+    end
+    return false
+end
+
+ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_GAIN", honor_filter)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_ADD", honor_filter)
