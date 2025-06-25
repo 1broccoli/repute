@@ -1,7 +1,7 @@
 # Repute
 
-
-[![GitHub license](https://img.shields.io/github/license/YourUsername/Repute?style=flat-square)](https://github.com/YourUsername/Repute/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/1broccoli/repute?style=flat-square)](https://github.com/1broccoli/repute/releases)
+[![GitHub license](https://img.shields.io/github/license/1broccoli/repute?style=flat-square)](https://github.com/1broccoli/repute/blob/main/LICENSE)
 [![WoW Classic](https://img.shields.io/badge/WoW-Classic%20Era-orange?style=flat-square)](https://worldofwarcraft.com/en-us/wowclassic)
 [![Lua](https://img.shields.io/badge/Language-Lua-blue?style=flat-square)](https://www.lua.org/)
 
@@ -30,7 +30,7 @@
 ## 📦 Installation
 
 ### Method 1: Manual Installation
-1. Download the latest release from the [Releases page](https://github.com/YourUsername/Repute/releases)
+1. Download the latest release from the [Releases page](https://github.com/1broccoli/repute/releases)
 2. Extract the `Repute` folder to your WoW Classic addons directory:
    ```
    World of Warcraft\_classic_era_\Interface\AddOns\
@@ -110,9 +110,8 @@
 
 ## 🆘 Support & Feedback
 
-- **Issues**: Report bugs on our [GitHub Issues page](https://github.com/YourUsername/Repute/issues)
+- **Issues**: Report bugs on our [GitHub Issues page](https://github.com/1broccoli/repute/issues)
 - **Feature Requests**: Submit ideas via GitHub Issues with the `enhancement` label
-- **Discord**: Join our community server for real-time support
 
 ## 📄 License
 
@@ -142,7 +141,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-See the [LICENSE](LICENSE) file for the complete license text.
+See the [LICENSE](https://github.com/1broccoli/repute/blob/main/LICENSE) file for the complete license text.
 
 ## 🙏 Acknowledgments
 
