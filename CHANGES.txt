@@ -1,26 +1,23 @@
-commit e2d3ac9393e758ce9c9d363b5e59d0151ddc8405
+lightweight tag aac0934ca48c1e1d166396121a01db1d65999021 1.1
+Author:	GitHub <noreply@github.com>
+Date:	Sun Jun 15 13:53:45 2025 -0700
+
+commit aac0934ca48c1e1d166396121a01db1d65999021
 Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Mar 26 12:28:46 2025 -0700
-
-    Update README.md
-
-commit c8b4116bdfc1f1cc65de7be4373d8009c42cdb16
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Mar 26 12:28:30 2025 -0700
-
-    Update README.md
-
-commit 441f591a96154c9184e70cacc1201ca3dd9ef1ef
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Mar 26 12:27:22 2025 -0700
+Date:   Sun Jun 15 13:53:45 2025 -0700
 
     Add files via upload
     
-    release
+    - Added Ace Libraries to improve code
+    - Added Honor and HK support to clean up chat
+    - Optional using SPY to show player's names printed for HK to be the color of their class but not required for addon to work.
+    - Minimap Icon with only a test button right now but will implement features in the future.
 
-commit 3c8ffadcfca23356161899a12896090697c464bc
+commit a7fe4530fc9a857a98abc2868f37cbe96a97df1e
 Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Mar 26 12:23:08 2025 -0700
+Date:   Wed Apr 9 01:07:23 2025 -0700
 
-    Initial commit
+    Update README.md
+    
+    sod patch update
 
