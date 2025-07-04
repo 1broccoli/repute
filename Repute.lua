@@ -769,25 +769,21 @@ function Repute:CHAT_MSG_COMBAT_HONOR_GAIN(event, msg, ...)
             end
         end
         
-        -- Check friends list
-        local numFriends = GetNumFriends()
-        for i = 1, numFriends do
-            local friendName, _, class = GetFriendInfo(i)
-            if friendName == name and class then
-                classCache[name] = class
-                classCacheTimestamp[name] = GetTime()
-                return class
-            end
-        end
+        -- Check friends list (Classic Era compatible)
+        -- Note: Friends list API is not available in Classic Era
+        -- This section is disabled for Classic Era compatibility
         
         -- Check who list (if recently used) - but limit iterations for performance
-        local numWho = math.min(GetNumWhoResults(), 50) -- Limit to 50 for performance
-        for i = 1, numWho do
-            local whoName, _, _, _, class = GetWhoInfo(i)
-            if whoName == name and class then
-                classCache[name] = class
-                classCacheTimestamp[name] = GetTime()
-                return class
+        -- Note: Who list API may have limited functionality in Classic Era
+        if GetNumWhoResults and GetWhoInfo then
+            local numWho = math.min(GetNumWhoResults(), 50) -- Limit to 50 for performance
+            for i = 1, numWho do
+                local whoName, _, _, _, class = GetWhoInfo(i)
+                if whoName == name and class then
+                    classCache[name] = class
+                    classCacheTimestamp[name] = GetTime()
+                    return class
+                end
             end
         end
         

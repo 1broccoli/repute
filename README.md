@@ -14,6 +14,7 @@
 - **Class-Colored Player Names**: Automatically color enemy player names by their class using multiple detection sources
 - **Battleground Integration**: Special (BG) tags for battleground objective honor with smart detection
 - **PvP Kill Tracking**: Detailed honor messages showing player rank and estimated honor points
+- **Classic Era Optimized**: Full compatibility with Classic Era API limitations and performance considerations
 
 ### 📊 **Advanced Reputation Tracking**
 - **Real-time Reputation Updates**: Track all faction reputation changes in chat
@@ -22,9 +23,11 @@
 - **Quest Status Tracking**: Monitor completion status for reputation-related quests
 
 ### ⚙️ **Smart Detection & Performance**
-- **Multiple Class Detection Sources**: Integrates with Spy addon, unit frames, guild/friends lists
-- **Intelligent Caching**: Performance-optimized with automatic cache cleanup
+- **Multiple Class Detection Sources**: Integrates with Spy addon, unit frames, guild lists
+- **Classic Era API Compatibility**: Optimized for Classic Era with proper API function checks
+- **Intelligent Caching**: Performance-optimized with automatic cache cleanup and TTL management
 - **Battleground Auto-Detection**: Smart detection using instance type and keyword analysis
+- **Error-Resistant Design**: Graceful handling of missing API functions and edge cases
 - **Ace3 Framework**: Built on the robust Ace3 library for stability and compatibility
 
 ## 📦 Installation
@@ -69,9 +72,11 @@
 - **Test Messages**: Preview different message formats
 
 ### Advanced Features
-- **Smart Cache**: Automatically manages class detection cache for optimal performance
-- **Multi-Source Detection**: Uses Spy addon, unit frames, and social lists for class detection
+- **Smart Cache**: Automatically manages class detection cache for optimal performance with TTL cleanup
+- **Multi-Source Detection**: Uses Spy addon, unit frames, and guild lists for class detection (Classic Era optimized)
 - **Battleground Auto-Detection**: Intelligently identifies BG objectives vs regular honor
+- **API Safety**: Robust error handling for missing or changed API functions across WoW versions
+- **Performance Optimization**: Efficient caching with periodic cleanup to prevent memory bloat
 
 ## 🔧 Dependencies
 
@@ -80,9 +85,11 @@
 - **Ace3 Libraries** (included with the addon)
 
 ### Optional (Enhanced Features)
-- **Spy Addon**: Provides additional class detection for enemy players
+- **Spy Addon**: Provides additional class detection for enemy players (highly recommended for PvP)
 - **LibDataBroker**: Enhanced minimap button functionality
 - **LibDBIcon**: Minimap icon positioning and management
+
+**Note**: Friends list integration is disabled in Classic Era due to API limitations, but guild and unit-based detection still work perfectly.
 
 ## 🤝 Compatibility
 
@@ -94,19 +101,34 @@
 
 ## 📋 Changelog
 
-### Latest Features
+### Latest Features (v2.1.0)
+- **🔧 Classic Era Compatibility**: Fixed API compatibility issues with Classic Era
+- **🚀 Enhanced Performance**: Improved caching system with TTL management
+- **🛡️ Error Handling**: Robust error handling for missing API functions
+- **🎯 Smart Detection**: Optimized class detection for Classic Era limitations
+- **⚡ Performance**: Reduced memory usage with automatic cache cleanup
+- **🔍 Better BG Detection**: Improved battleground objective recognition
+
+### Previous Features
 - Enhanced honor message system with class detection
 - Battleground objective detection and tagging
-- Performance optimizations with smart caching
 - Configurable settings panel
 - Multi-character reputation tracking
 - Improved tooltip integration
 
 ## 🐛 Known Issues
 
-- Class detection may be limited for players not in your immediate vicinity
-- Some BG objectives may not be immediately recognized (will improve over time)
-- Reputation tracking requires visiting the reputation panel once per session
+- **Class Detection**: Class detection may be limited for players not in your immediate vicinity or guild
+- **BG Recognition**: Some BG objectives may not be immediately recognized (will improve over time)
+- **Reputation Tracking**: Reputation tracking requires visiting the reputation panel once per session
+- **API Limitations**: Some social features (friends list) are disabled in Classic Era due to API restrictions
+
+## 🔧 Recent Fixes
+
+- ✅ **Fixed**: `GetNumFriends` API error in Classic Era
+- ✅ **Fixed**: Memory optimization with cache TTL management
+- ✅ **Fixed**: Improved error handling for missing API functions
+- ✅ **Fixed**: Enhanced performance with smart caching
 
 ## 🆘 Support & Feedback
 
