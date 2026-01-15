@@ -1,8 +1,8 @@
-## Interface: 11306
+## Interface: 20504
 ## Title: Repute
 ## Author: Pegga
-## Notes: Reputation gained is posted in chat
-## Version: 1.1
+## Notes: Reputation gained is posted in chat. Compatible with Classic Era & TBC Anniversary.
+## Version: 1.4
 ## SavedVariables: Repute_Data
 ## IconTexture: Interface\AddOns\Repute\Media\repute.png
 
