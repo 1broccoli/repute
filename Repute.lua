@@ -25,16 +25,13 @@ local repFrame = DEFAULT_CHAT_FRAME
 
 local rewardItemCache = {}
 
--- SavedVariables for minimap icon and settings
-ReputeDB = ReputeDB or { 
-    minimap = { hide = false },
-    settings = {
-        showHonorMessages = true,
-        showClassColors = true,
-        showBGTag = true,
-        debugMode = false
-    }
-}
+-- SavedVariables for minimap icon
+ReputeDB = ReputeDB or { minimap = { hide = false } }
+
+-- Initialize all Repute tables to prevent nil errors
+Repute.repitems = Repute.repitems or {}
+Repute.classbooks = Repute.classbooks or {}
+Repute.repitemsets = Repute.repitemsets or {}
 
 -- Ensure factionStandingColours is initialized
 if not Repute.factionStandingColours then
@@ -50,13 +47,28 @@ if not Repute.factionStandingColours then
     }
 end
 
+-- Initialize factionStandingMax
+if not Repute.factionStandingMax then
+    Repute.factionStandingMax = {
+        [1] = 36000,  -- Hated
+        [2] = 3000,   -- Hostile
+        [3] = 3000,   -- Unfriendly
+        [4] = 3000,   -- Neutral
+        [5] = 6000,   -- Friendly
+        [6] = 12000,  -- Honored
+        [7] = 21000,  -- Revered
+        [8] = 999,    -- Exalted (no max)
+    }
+end
+
 function Repute:OnEnable()
     self:RegisterEvent("PLAYER_LOGIN")
     self:RegisterEvent("MODIFIER_STATE_CHANGED")
     self:RegisterEvent("PLAYER_LEVEL_UP")
     self:RegisterEvent("GET_ITEM_INFO_RECEIVED")
     self:RegisterEvent("QUEST_TURNED_IN")
-    self:RegisterEvent("LEARNED_SPELL_IN_TAB")
+    -- Try to register LEARNED_SPELL_IN_TAB (exists in Classic Era, not in TBC Anniversary)
+    pcall(function() self:RegisterEvent("LEARNED_SPELL_IN_TAB") end)
     self:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
     -- Do NOT register CHAT_MSG_COMBAT_HONOR_ADD (not a valid event in Classic)
 end
@@ -70,7 +82,7 @@ function Repute:MODIFIER_STATE_CHANGED(event, button, state)
         local link = select(2, GameTooltip:GetItem())
         if link then
             local id = tonumber(string.match(link, "item:(%d*)"))
-            if self.repitems[id] then
+            if self.repitems and id and self.repitems[id] then
                 GameTooltip:ClearLines()
                 GameTooltip:SetHyperlink(link)
             end
@@ -80,7 +92,7 @@ function Repute:MODIFIER_STATE_CHANGED(event, button, state)
         local link = select(2, GameTooltip:GetItem())
         if link then
             local id = tonumber(string.match(link, "item:(%d*)"))
-            if self.repitems[id] then
+            if self.repitems and id and self.repitems[id] then
                 if showRewardTooltip.rewardList and showRewardTooltip.rewardMax > 1 then
                     showRewardTooltip.rewardShowing = showRewardTooltip.rewardShowing + 1
                     if showRewardTooltip.rewardShowing > showRewardTooltip.rewardMax then showRewardTooltip.rewardShowing = 1 end
@@ -104,7 +116,7 @@ function Repute:GET_ITEM_INFO_RECEIVED(event, itemID, success)
                 local link = select(2, GameTooltip:GetItem())
                 if link then
                     local id = tonumber(string.match(link, "item:(%d*)"))
-                    if self.repitems[id] then
+                    if self.repitems and id and self.repitems[id] then
                         if showRewardTooltip.rewardList and showRewardTooltip.rewardMax > 1 then
                             local needsCycleText = true
                             for i = 1, showRewardTooltip:NumLines() do
@@ -146,57 +158,21 @@ function Repute:ShowSettings()
     if not settingsFrame then
         settingsFrame = AceGUI:Create("Frame")
         settingsFrame:SetTitle("Repute Settings")
-        settingsFrame:SetStatusText("Honor/Rep Addon by Pegga - Enhanced Version")
+        settingsFrame:SetStatusText("Honor/Rep Addon by Pegga")
         settingsFrame:SetCallback("OnClose", function(widget) AceGUI:Release(widget) settingsFrame = nil end)
         settingsFrame:SetLayout("Flow")
-        settingsFrame:SetWidth(400)
-        settingsFrame:SetHeight(250)
+        settingsFrame:SetWidth(350)
+        settingsFrame:SetHeight(150)
 
-        -- Honor Messages Toggle
-        local honorToggle = AceGUI:Create("CheckBox")
-        honorToggle:SetLabel("Show Custom Honor Messages")
-        honorToggle:SetValue(ReputeDB.settings.showHonorMessages)
-        honorToggle:SetCallback("OnValueChanged", function(widget, event, val)
-            ReputeDB.settings.showHonorMessages = val
-        end)
-        settingsFrame:AddChild(honorToggle)
-
-        -- Class Colors Toggle
-        local classColorToggle = AceGUI:Create("CheckBox")
-        classColorToggle:SetLabel("Show Class Colors for Player Names")
-        classColorToggle:SetValue(ReputeDB.settings.showClassColors)
-        classColorToggle:SetCallback("OnValueChanged", function(widget, event, val)
-            ReputeDB.settings.showClassColors = val
-        end)
-        settingsFrame:AddChild(classColorToggle)
-
-        -- BG Tag Toggle
-        local bgTagToggle = AceGUI:Create("CheckBox")
-        bgTagToggle:SetLabel("Show (BG) Tag for Battleground Honor")
-        bgTagToggle:SetValue(ReputeDB.settings.showBGTag)
-        bgTagToggle:SetCallback("OnValueChanged", function(widget, event, val)
-            ReputeDB.settings.showBGTag = val
-        end)
-        settingsFrame:AddChild(bgTagToggle)
-
-        -- Test Button
         local testBtn = AceGUI:Create("Button")
-        testBtn:SetText("Test Honor Messages")
+        testBtn:SetText("Test Honor Print")
         testBtn:SetWidth(200)
         testBtn:SetCallback("OnClick", function()
-            DEFAULT_CHAT_FRAME:AddMessage("|cffffd100+123 Honor|r | |cff40c7ebTestmage|r |cffffd100(Grand Marshal)|r")
-            DEFAULT_CHAT_FRAME:AddMessage("|cffffd100+15 Honor|r |cff4080ff(BG)|r")
-            DEFAULT_CHAT_FRAME:AddMessage("|cffffd100+50 Honor|r")
+            -- Print a sample honor message using the same logic as in Repute_AddMessage
+            local sample = "|cffffd100+123 Honor|r | |cff40c7ebTestmage|r |cffffd100(Grand Marshal)|r"
+            DEFAULT_CHAT_FRAME:AddMessage(sample)
         end)
         settingsFrame:AddChild(testBtn)
-
-        -- Cache Info
-        local cacheInfo = AceGUI:Create("Label")
-        local cacheCount = 0
-        for _ in pairs(classCache) do cacheCount = cacheCount + 1 end
-        cacheInfo:SetText(string.format("Class cache entries: %d", cacheCount))
-        cacheInfo:SetWidth(200)
-        settingsFrame:AddChild(cacheInfo)
     end
     settingsFrame:Show()
 end
@@ -557,10 +533,10 @@ end
 hooksecurefunc(ItemRefTooltip, "SetHyperlink", function(self, link)
     local id = tonumber(string.match(link, "item:(%d*)"))
     if id then
-        if Repute.repitems[id] then
+        if Repute.repitems and Repute.repitems[id] then
             if Repute.repitems[id][playerFaction] then id = Repute.repitems[id][playerFaction] end
             addRepToToolTip(self, id)
-        elseif Repute.classbooks[id] then
+        elseif Repute.classbooks and Repute.classbooks[id] then
             addClassBookToToolTip(self, id)
         end
     end
@@ -571,10 +547,10 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
     if link then
         local id = tonumber(string.match(link, "item:(%d*)"))
         if id then
-            if Repute.repitems[id] then
+            if Repute.repitems and Repute.repitems[id] then
                 if Repute.repitems[id][playerFaction] then id = Repute.repitems[id][playerFaction] end
                 addRepToToolTip(self, id)
-            elseif Repute.classbooks[id] then
+            elseif Repute.classbooks and Repute.classbooks[id] then
                 addClassBookToToolTip(self, id)
             end
         end
@@ -646,19 +622,8 @@ end
 -- Event handler for CHAT_MSG_COMBAT_HONOR_GAIN and CHAT_MSG_COMBAT_HONOR_ADD
 -- and print our own message, suppressing Blizzard's.
 
-local honor_award_pattern = "You have been awarded (%d+) honor points?%."
+local honor_award_pattern = "You have been awarded (%d+) honor points%."
 local honor_kill_pattern = "^(.-) dies, honorable kill Rank: (.-) %(Estimated Honor Points: (%d+)%)"
-local honor_bg_pattern = "You have been awarded (%d+) honor points"  -- Broader pattern for BG objectives
-
--- Additional patterns for better BG detection
-local bg_specific_patterns = {
-    "for defending",
-    "for capturing",
-    "for returning",
-    "flag captured",
-    "tower destroyed",
-    "bunker destroyed"
-}
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS or CUSTOM_CLASS_COLORS
 
@@ -675,205 +640,54 @@ local STATIC_CLASS_COLORS = {
     WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
 }
 
--- Enhanced class cache with TTL for better memory management
-local classCache = {}
-local classCacheTimestamp = {}
-local CACHE_TTL = 300 -- 5 minutes cache expiration
-
--- Cache cleanup function
-local function cleanupClassCache()
-    local currentTime = GetTime()
-    for name, timestamp in pairs(classCacheTimestamp) do
-        if currentTime - timestamp > CACHE_TTL then
-            classCache[name] = nil
-            classCacheTimestamp[name] = nil
+-- Utility: Try to get class from Spy if available
+local function getClassForPlayer(name)
+    if Spy and Spy.db and Spy.db.profile and Spy.db.profile.Colors and Spy.db.profile.Colors.Class then
+        for class, tbl in pairs(Spy.db.profile.Colors.Class) do
+            if tbl[name] then
+                return class
+            end
         end
+    end
+    return nil
+end
+
+-- Colorize name by class
+local function colorizeClassName(name, class)
+    local color = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]) or (CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class])
+    if color then
+        return ("|cff%02x%02x%02x%s|r"):format(color.r*255, color.g*255, color.b*255, name)
+    else
+        return name
     end
 end
 
 -- Your event handler
 function Repute:CHAT_MSG_COMBAT_HONOR_GAIN(event, msg, ...)
-    -- Local helper functions within the method
-    -- Enhanced helper function for class detection with improved caching
-    local function getClassForPlayerLocal(name)
-        -- Clean up old cache entries periodically
-        if math.random(1, 20) == 1 then -- 5% chance to cleanup
-            cleanupClassCache()
-        end
-        
-        -- First check our cache
-        if classCache[name] then
-            return classCache[name]
-        end
-        
-        -- Then try Spy addon with better error handling
-        if Spy and type(Spy) == "table" and Spy.db and type(Spy.db) == "table" then
-            local spyProfile = Spy.db.profile
-            if spyProfile and spyProfile.Colors and spyProfile.Colors.Class then
-                for class, tbl in pairs(spyProfile.Colors.Class) do
-                    if type(tbl) == "table" and tbl[name] then
-                        classCache[name] = class
-                        classCacheTimestamp[name] = GetTime()
-                        return class
-                    end
-                end
-            end
-        end
-        return nil
-    end
-    
-    local function getClassFromUnit(name)
-        -- First check our cache
-        if classCache[name] then
-            return classCache[name]
-        end
-        
-        -- Array of unit IDs to check for efficiency
-        local unitIds = {"target", "mouseover", "focus"}
-        
-        for _, unitId in ipairs(unitIds) do
-            if UnitExists(unitId) and UnitName(unitId) == name and UnitIsPlayer(unitId) then
-                local _, class = UnitClass(unitId)
-                if class then
-                    classCache[name] = class
-                    classCacheTimestamp[name] = GetTime()
-                    return class
-                end
-            end
-        end
-        
-        return nil
-    end
-    
-    local function colorizeClassNameLocal(name, class)
-        local color = (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]) or (CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class]) or STATIC_CLASS_COLORS[class]
-        if color then
-            return ("|cff%02x%02x%02x%s|r"):format(color.r*255, color.g*255, color.b*255, name)
-        else
-            return name
-        end
-    end
-    
-    -- Enhanced fallback function with better error handling and caching
-    local function guessClassFromName(name)
-        -- Check guild members if we're in a guild
-        if IsInGuild() then
-            local numMembers = GetNumGuildMembers()
-            for i = 1, numMembers do
-                local guildName, _, _, _, class = GetGuildRosterInfo(i)
-                if guildName == name and class then
-                    classCache[name] = class
-                    classCacheTimestamp[name] = GetTime()
-                    return class
-                end
-            end
-        end
-        
-        -- Check friends list (Classic Era compatible)
-        -- Note: Friends list API is not available in Classic Era
-        -- This section is disabled for Classic Era compatibility
-        
-        -- Check who list (if recently used) - but limit iterations for performance
-        -- Note: Who list API may have limited functionality in Classic Era
-        if GetNumWhoResults and GetWhoInfo then
-            local numWho = math.min(GetNumWhoResults(), 50) -- Limit to 50 for performance
-            for i = 1, numWho do
-                local whoName, _, _, _, class = GetWhoInfo(i)
-                if whoName == name and class then
-                    classCache[name] = class
-                    classCacheTimestamp[name] = GetTime()
-                    return class
-                end
-            end
-        end
-        
-        return nil
-    end
-
-    -- Check for general honor award first
     local honor = msg:match(honor_award_pattern)
     if honor then
-        if ReputeDB.settings.showHonorMessages then
-            DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r"):format(honor))
-        end
+        DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r"):format(honor))
         return
     end
-    
-    -- Enhanced BG objective honor detection
-    local bgHonor = msg:match(honor_bg_pattern)
-    if bgHonor and not msg:match(honor_kill_pattern) then
-        if not ReputeDB.settings.showHonorMessages then
-            return
-        end
-        
-        -- Check if this looks like a BG objective by looking for BG-specific keywords
-        local isBgObjective = false
-        local lowerMsg = string.lower(msg)
-        
-        for _, pattern in ipairs(bg_specific_patterns) do
-            if string.find(lowerMsg, pattern) then
-                isBgObjective = true
-                break
-            end
-        end
-        
-        -- If no specific BG keywords found, assume it's BG honor if we're in a battleground
-        if not isBgObjective then
-            local inBattleground = false
-            local _, instanceType = IsInInstance()
-            if instanceType == "pvp" then
-                inBattleground = true
-            end
-            isBgObjective = inBattleground
-        end
-        
-        if isBgObjective and ReputeDB.settings.showBGTag then
-            DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r |cff4080ff(BG)|r"):format(bgHonor))
-        else
-            DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r"):format(bgHonor))
-        end
-        return
-    end
-    
     local player, rank, honor2 = msg:match(honor_kill_pattern)
     if player and rank and honor2 then
-        if not ReputeDB.settings.showHonorMessages then
-            return
+        local class = getClassForPlayer(player)
+        if not class and UnitName("target") == player then
+            _, class = UnitClass("target")
         end
-        
-        local coloredName = player
-        if ReputeDB.settings.showClassColors then
-            -- Try multiple sources for class information
-            local class = getClassForPlayerLocal(player)  -- First try Spy
-            if not class then
-                class = getClassFromUnit(player)  -- Then try unit functions
-            end
-            if not class then
-                class = guessClassFromName(player)  -- Finally try other sources
-            end
-            
-            coloredName = class and colorizeClassNameLocal(player, class) or player
-        end
-        
+        local coloredName = class and colorizeClassName(player, class) or player
         DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r | %s |cffffd100(%s)|r"):format(honor2, coloredName, rank))
         return
     end
 end
 
--- Enhanced chat filter with better performance and accuracy
+-- To suppress Blizzard's message, use a chat filter that returns true for these messages
 local function honor_filter(self, event, msg, ...)
-    -- Quick check for honor-related messages to avoid unnecessary pattern matching
-    if not string.find(msg, "honor", 1, true) then
-        return false
+    if msg:match(honor_award_pattern) or msg:match(honor_kill_pattern) then
+        return true
     end
-    
-    -- Check if this is any type of honor message we want to replace
-    if msg:match(honor_award_pattern) or msg:match(honor_kill_pattern) or msg:match(honor_bg_pattern) then
-        return true  -- This suppresses the original Blizzard message
-    end
-    
-    return false  -- Let other messages through
+    return false
 end
 
 ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_GAIN", honor_filter)
--- Note: CHAT_MSG_COMBAT_HONOR_ADD is not a valid event in Classic, so we don't filter it
+ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_ADD", honor_filter)
