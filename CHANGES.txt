@@ -6,26 +6,9 @@ Version 1.2 - January 15, 2026
 - Added safety checks before accessing repitems in all event handlers and tooltip hooks
 - Fixes compatibility issues with TBC Anniversary (20th Anniversary Edition)
 
-lightweight tag aac0934ca48c1e1d166396121a01db1d65999021 1.1
-Author:	GitHub <noreply@github.com>
-Date:	Sun Jun 15 13:53:45 2025 -0700
-
-commit aac0934ca48c1e1d166396121a01db1d65999021
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Sun Jun 15 13:53:45 2025 -0700
-
-    Add files via upload
-    
+Version 1.1    
     - Added Ace Libraries to improve code
     - Added Honor and HK support to clean up chat
     - Optional using SPY to show player's names printed for HK to be the color of their class but not required for addon to work.
     - Minimap Icon with only a test button right now but will implement features in the future.
-
-commit a7fe4530fc9a857a98abc2868f37cbe96a97df1e
-Author: Broccoli <138363916+1broccoli@users.noreply.github.com>
-Date:   Wed Apr 9 01:07:23 2025 -0700
-
-    Update README.md
-    
-    sod patch update
 
