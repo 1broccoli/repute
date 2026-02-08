@@ -2,7 +2,7 @@
 ## Title: Repute
 ## Author: Pegga
 ## Notes: Reputation gained is posted in chat. Compatible with Classic Era & TBC Anniversary.
-## Version: 1.6
+## Version: 2.0.0
 ## SavedVariables: Repute_Data, ReputeDB
 ## IconTexture: Interface\AddOns\Repute\Media\repute.png
 ## X-Curse-Project-ID: 1229460

@@ -1,4 +1,4 @@
-Version 3.0 - February 5, 2026
+Version 2.0 - February 5, 2026
 - Custom experience messages with bonus indicators (gb for group bonus, rb for rested bonus)
 - Toggle between compact (1.2k) or full (1200) number formats for experience and reputation
 - New "Hide Minimap Icon" option to declutter your interface
