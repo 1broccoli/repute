@@ -1,14 +1,17 @@
-Version 1.2 - January 15, 2026
-- Fixed nil value errors for 'repitems' field by initializing tables at addon startup
-- Added initialization for Repute.repitems, Repute.classbooks, and Repute.repitemsets
-- Added Repute.factionStandingMax table with proper reputation values
-- Removed LEARNED_SPELL_IN_TAB event registration (doesn't exist in TBC Anniversary)
-- Added safety checks before accessing repitems in all event handlers and tooltip hooks
-- Fixes compatibility issues with TBC Anniversary (20th Anniversary Edition)
+Version 3.0 - February 5, 2026
+- Custom experience messages with bonus indicators (gb for group bonus, rb for rested bonus)
+- Toggle between compact (1.2k) or full (1200) number formats for experience and reputation
+- New "Hide Minimap Icon" option to declutter your interface
+- Auto-track reputation gains in your watch bar for easier monitoring
+- Improved stability and performance fixes for TBC Anniversary compatibility
 
-Version 1.1    
-    - Added Ace Libraries to improve code
-    - Added Honor and HK support to clean up chat
-    - Optional using SPY to show player's names printed for HK to be the color of their class but not required for addon to work.
-    - Minimap Icon with only a test button right now but will implement features in the future.
+Version 1.5 - January 18, 2026
+- Added "Hide Minimap Icon" option in settings window
+- Added "Auto-Track Reputation Gains" option in settings window
+- When enabled, automatically tracks reputation in the watch bar when you gain rep (excluding honor)
+- Both settings persist across game sessions
+
+Version 1.2 - January 15, 2026
+- Fixed compatibility issues with TBC Anniversary (20th Anniversary Edition)
+- Improved error handling and stability
 

@@ -25,13 +25,36 @@ local repFrame = DEFAULT_CHAT_FRAME
 
 local rewardItemCache = {}
 
--- SavedVariables for minimap icon
-ReputeDB = ReputeDB or { minimap = { hide = false } }
+-- SavedVariables for minimap icon and settings
+ReputeDB = ReputeDB or {}
+ReputeDB.minimap = ReputeDB.minimap or { hide = false }
+if ReputeDB.autoTrackRep == nil then ReputeDB.autoTrackRep = false end
+if ReputeDB.verboseExpFormat == nil then ReputeDB.verboseExpFormat = false end
+if ReputeDB.verboseRepFormat == nil then ReputeDB.verboseRepFormat = false end
 
 -- Initialize all Repute tables to prevent nil errors
 Repute.repitems = Repute.repitems or {}
 Repute.classbooks = Repute.classbooks or {}
 Repute.repitemsets = Repute.repitemsets or {}
+
+-- Utility function to shorten large numbers (e.g., 1234 = 1.2k, 1234567 = 1.2M)
+local function shortenValue(value, formatType)
+    value = tonumber(value) or 0
+    -- formatType can be "exp" or "rep", if verbose format is enabled for that type, return full number
+    if formatType == "exp" and ReputeDB.verboseExpFormat then
+        return tostring(value)
+    elseif formatType == "rep" and ReputeDB.verboseRepFormat then
+        return tostring(value)
+    end
+    -- Otherwise, use shortened format
+    if value >= 1000000 then
+        return math.floor(value / 100000) / 10 .. "M"
+    elseif value >= 1000 then
+        return math.floor(value / 100) / 10 .. "k"
+    else
+        return tostring(value)
+    end
+end
 
 -- Ensure factionStandingColours is initialized
 if not Repute.factionStandingColours then
@@ -70,6 +93,8 @@ function Repute:OnEnable()
     -- Try to register LEARNED_SPELL_IN_TAB (exists in Classic Era, not in TBC Anniversary)
     pcall(function() self:RegisterEvent("LEARNED_SPELL_IN_TAB") end)
     self:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
+    -- Register CHAT_MSG_COMBAT_XP_GAIN for experience messages
+    self:RegisterEvent("CHAT_MSG_COMBAT_XP_GAIN")
     -- Do NOT register CHAT_MSG_COMBAT_HONOR_ADD (not a valid event in Classic)
 end
 
@@ -162,7 +187,7 @@ function Repute:ShowSettings()
         settingsFrame:SetCallback("OnClose", function(widget) AceGUI:Release(widget) settingsFrame = nil end)
         settingsFrame:SetLayout("Flow")
         settingsFrame:SetWidth(350)
-        settingsFrame:SetHeight(150)
+        settingsFrame:SetHeight(200)
 
         local testBtn = AceGUI:Create("Button")
         testBtn:SetText("Test Honor Print")
@@ -173,6 +198,49 @@ function Repute:ShowSettings()
             DEFAULT_CHAT_FRAME:AddMessage(sample)
         end)
         settingsFrame:AddChild(testBtn)
+
+        local minimapToggle = AceGUI:Create("CheckBox")
+        minimapToggle:SetLabel("Hide Minimap Icon")
+        minimapToggle:SetValue(ReputeDB.minimap.hide)
+        minimapToggle:SetWidth(200)
+        minimapToggle:SetCallback("OnValueChanged", function(widget, event, value)
+            ReputeDB.minimap.hide = value
+            if LDBIcon then
+                if value then
+                    LDBIcon:Hide("Repute")
+                else
+                    LDBIcon:Show("Repute")
+                end
+            end
+        end)
+        settingsFrame:AddChild(minimapToggle)
+
+        local autoTrackToggle = AceGUI:Create("CheckBox")
+        autoTrackToggle:SetLabel("Auto-Track Reputation")
+        autoTrackToggle:SetValue(ReputeDB.autoTrackRep)
+        autoTrackToggle:SetWidth(200)
+        autoTrackToggle:SetCallback("OnValueChanged", function(widget, event, value)
+            ReputeDB.autoTrackRep = value
+        end)
+        settingsFrame:AddChild(autoTrackToggle)
+
+        local verboseExpToggle = AceGUI:Create("CheckBox")
+        verboseExpToggle:SetLabel("Verbose Experience")
+        verboseExpToggle:SetValue(ReputeDB.verboseExpFormat)
+        verboseExpToggle:SetWidth(200)
+        verboseExpToggle:SetCallback("OnValueChanged", function(widget, event, value)
+            ReputeDB.verboseExpFormat = value
+        end)
+        settingsFrame:AddChild(verboseExpToggle)
+
+        local verboseRepToggle = AceGUI:Create("CheckBox")
+        verboseRepToggle:SetLabel("Verbose Reputation")
+        verboseRepToggle:SetValue(ReputeDB.verboseRepFormat)
+        verboseRepToggle:SetWidth(200)
+        verboseRepToggle:SetCallback("OnValueChanged", function(widget, event, value)
+            ReputeDB.verboseRepFormat = value
+        end)
+        settingsFrame:AddChild(verboseRepToggle)
     end
     settingsFrame:Show()
 end
@@ -303,7 +371,13 @@ local function getRepString(repValue, profile)
         end
         standingLabel = Repute.factionStandingColours[standingID] .. GetText("FACTION_STANDING_LABEL"..standingID, profile.gender)
         if standingID ~= 8 then
-            progress = " " .. math.floor(dispValue / 100) / 10 .. "k /" .. Repute.factionStandingMax[standingID] / 1000 .. "k"
+            local displayValue = math.floor(dispValue / 100) / 10
+            local maxValue = Repute.factionStandingMax[standingID] / 1000
+            if ReputeDB.verboseRepFormat then
+                progress = " " .. displayValue * 1000 .. " /" .. maxValue * 1000
+            else
+                progress = " " .. displayValue .. "k /" .. maxValue .. "k"
+            end
         end
         repString = {
             str = standingLabel .. progress,
@@ -571,11 +645,22 @@ function Repute:createRepString(faction)
         local positive = "+"
         local change = faction.barValue - faction.oldValue
         if change < 0 then positive = "" end
-        changeString = positive .. change
+        if ReputeDB.verboseRepFormat then
+            changeString = positive .. change
+        else
+            changeString = positive .. shortenValue(change, "rep")
+        end
     end
     
-    local newmessage = faction.name .. " " .. changeString .. " ("..factionStandingtext .. " " .. faction.barValue - faction.barMin .. " /" .. faction.barMax - faction.barMin .. "|r)"
-    getglobal(repFrame:GetName()):AddMessage(newmessage, 0.5, 0.5, 1)
+    local barValue = faction.barValue - faction.barMin
+    local barMax = faction.barMax - faction.barMin
+    if ReputeDB.verboseRepFormat then
+        local newmessage = faction.name .. " " .. changeString .. " ("..factionStandingtext .. " " .. barValue .. " /" .. barMax .. "|r)"
+        getglobal(repFrame:GetName()):AddMessage(newmessage, 0.5, 0.5, 1)
+    else
+        local newmessage = faction.name .. " " .. changeString .. " ("..factionStandingtext .. " " .. shortenValue(barValue, "rep") .. " /" .. shortenValue(barMax, "rep") .. "|r)"
+        getglobal(repFrame:GetName()):AddMessage(newmessage, 0.5, 0.5, 1)
+    end
 end
 
 function Repute:getAllFactions(initiate)
@@ -612,6 +697,11 @@ function Repute:getAllFactions(initiate)
                     }
                     Repute_Data[profileKey].factions[factionID] = earnedValue
                     Repute:createRepString(faction)
+                    
+                    -- Auto-track reputation if enabled
+                    if ReputeDB.autoTrackRep then
+                        SetWatchedFactionIndex(factionIndex)
+                    end
                 end
             end
         end
@@ -624,6 +714,7 @@ end
 
 local honor_award_pattern = "You have been awarded (%d+) honor points%."
 local honor_kill_pattern = "^(.-) dies, honorable kill Rank: (.-) %(Estimated Honor Points: (%d+)%)"
+local experience_gain_pattern = "[Yy]ou gain (%d+) experience%."
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS or CUSTOM_CLASS_COLORS
 
@@ -640,8 +731,11 @@ local STATIC_CLASS_COLORS = {
     WARRIOR = { r = 0.78, g = 0.61, b = 0.43 },
 }
 
--- Utility: Try to get class from Spy if available
+-- Utility function to shorten large numbers (e.g., 1234 = 1.2k, 1234567 = 1.2M)
+
+-- Utility: Try to get class from Spy or Details addon
 local function getClassForPlayer(name)
+    -- Try Spy addon first
     if Spy and Spy.db and Spy.db.profile and Spy.db.profile.Colors and Spy.db.profile.Colors.Class then
         for class, tbl in pairs(Spy.db.profile.Colors.Class) do
             if tbl[name] then
@@ -649,6 +743,15 @@ local function getClassForPlayer(name)
             end
         end
     end
+    
+    -- Try Details addon
+    if _G.Details and _G.Details.database and _G.Details.database.player_classes then
+        local playerClass = _G.Details.database.player_classes[name]
+        if playerClass then
+            return playerClass
+        end
+    end
+    
     return nil
 end
 
@@ -662,11 +765,11 @@ local function colorizeClassName(name, class)
     end
 end
 
--- Your event handler
+-- Event handler for honor and experience gains
 function Repute:CHAT_MSG_COMBAT_HONOR_GAIN(event, msg, ...)
     local honor = msg:match(honor_award_pattern)
     if honor then
-        DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r"):format(honor))
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100+"..shortenValue(honor).." Honor|r")
         return
     end
     local player, rank, honor2 = msg:match(honor_kill_pattern)
@@ -676,18 +779,50 @@ function Repute:CHAT_MSG_COMBAT_HONOR_GAIN(event, msg, ...)
             _, class = UnitClass("target")
         end
         local coloredName = class and colorizeClassName(player, class) or player
-        DEFAULT_CHAT_FRAME:AddMessage(("|cffffd100+%s Honor|r | %s |cffffd100(%s)|r"):format(honor2, coloredName, rank))
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100+"..shortenValue(honor2).." Honor|r | "..coloredName.." |cffffd100("..rank..")|r")
+        return
+    end
+end
+
+function Repute:CHAT_MSG_COMBAT_XP_GAIN(event, msg, ...)
+    local xp = msg:match(experience_gain_pattern)
+    if xp then
+        local message = "|cffa335eeExperience|r |cffa335ee+" .. shortenValue(xp, "exp") .. "|r"
+        local bonusCount = 0
+        
+        -- Check for group bonus
+        local gbAmount = msg:match("%(%+(%d+) group bonus%)")
+        if gbAmount then
+            message = message .. " |cff0070dd(+" .. shortenValue(gbAmount, "exp") .. " gb)|r"
+            bonusCount = bonusCount + 1
+        end
+        
+        -- Check for rested bonus
+        local rbAmount = msg:match("%(%+(%d+) rested bonus%)")
+        if rbAmount then
+            message = message .. " |cff0070dd(+" .. shortenValue(rbAmount, "exp") .. " rb)|r"
+            bonusCount = bonusCount + 1
+        end
+        
+        -- Add indicator if getting all bonuses
+        if bonusCount == 2 then
+            message = message .. " |cffa335ee*|r"
+        end
+        
+        DEFAULT_CHAT_FRAME:AddMessage(message)
         return
     end
 end
 
 -- To suppress Blizzard's message, use a chat filter that returns true for these messages
-local function honor_filter(self, event, msg, ...)
-    if msg:match(honor_award_pattern) or msg:match(honor_kill_pattern) then
+local function combat_gain_filter(self, event, msg, ...)
+
+    if msg:match(honor_award_pattern) or msg:match(honor_kill_pattern) or msg:match(experience_gain_pattern) then
         return true
     end
     return false
 end
 
-ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_GAIN", honor_filter)
-ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_ADD", honor_filter)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_GAIN", combat_gain_filter)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_HONOR_ADD", combat_gain_filter)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_COMBAT_XP_GAIN", combat_gain_filter)

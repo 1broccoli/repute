@@ -1,10 +1,12 @@
-## Interface: 20504
+## Interface: 20505
 ## Title: Repute
 ## Author: Pegga
 ## Notes: Reputation gained is posted in chat. Compatible with Classic Era & TBC Anniversary.
-## Version: 1.4
-## SavedVariables: Repute_Data
+## Version: 1.6
+## SavedVariables: Repute_Data, ReputeDB
 ## IconTexture: Interface\AddOns\Repute\Media\repute.png
+## X-Curse-Project-ID: 1229460
+## Website: https://github.com/1broccoli/repute/
 
 Libs\AceAddon-3.0\AceAddon-3.0.xml
 Libs\AceConfig-3.0\AceConfig-3.0.xml
